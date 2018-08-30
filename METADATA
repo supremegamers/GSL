@@ -1,0 +1,11 @@
+name: "Microsoft-GSL"
+description:
+    "The Guideline Support Library (GSL) contains functions and types that are suggested for use by the C++ Core Guidelines maintained by the Standard C++ Foundation. This repo contains Microsoft's implementation of GSL."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/Microsoft/GSL"
+  }
+  version: "2b8d20425e990c5a3e9a0158e2cedacbcdf9e522"
+}
