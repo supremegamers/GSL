@@ -6,20 +6,29 @@ project(GSLTests CXX)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 list(APPEND CATCH_CMAKE_ARGS
-    "-DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}"
+    "-DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/external"
     "-DNO_SELFTEST=true"
 )
 
-# add catch
-ExternalProject_Add(
-    catch
-    PREFIX ${CMAKE_BINARY_DIR}/catch
-    GIT_REPOSITORY https://github.com/philsquared/Catch.git
-    GIT_TAG v1.9.6    
-    CMAKE_ARGS ${CATCH_CMAKE_ARGS}
-    LOG_DOWNLOAD 1
-    UPDATE_DISCONNECTED 1
-)
+if(GIT_FOUND)
+    # add catch
+    ExternalProject_Add(
+        catch
+        PREFIX ${CMAKE_BINARY_DIR}/catch
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v2.0.1
+        CMAKE_ARGS ${CATCH_CMAKE_ARGS}
+        LOG_DOWNLOAD 1
+        UPDATE_DISCONNECTED 1
+    )
+else()
+    # assume catch is installed in a system directory
+    add_custom_target(catch)
+endif()
+
+if (MSVC AND (GSL_CXX_STANDARD EQUAL 17))
+    set(GSL_CPLUSPLUS_OPT -Zc:__cplusplus -permissive-)
+endif()
 
 # this interface adds compile options to how the tests are run
 # please try to keep entries ordered =)
@@ -30,6 +39,7 @@ target_compile_options(gsl_tests_config INTERFACE
         /W4
         /WX
     >
+    ${GSL_CPLUSPLUS_OPT}
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
         -fno-strict-aliasing
         -Wall
@@ -39,6 +49,7 @@ target_compile_options(gsl_tests_config INTERFACE
         -Werror
         -Wextra
         -Wno-missing-braces
+        -Wno-unknown-attributes
         -Wnon-virtual-dtor
         -Wold-style-cast
         -Woverloaded-virtual
@@ -46,6 +57,11 @@ target_compile_options(gsl_tests_config INTERFACE
         -Wshadow
         -Wsign-conversion
     >
+)
+
+# for tests to find the catch header
+target_include_directories(gsl_tests_config INTERFACE
+    ${CMAKE_BINARY_DIR}/external/include
 )
 
 # set definitions for tests
@@ -91,3 +107,67 @@ add_gsl_test(utils_tests)
 add_gsl_test(owner_tests)
 add_gsl_test(byte_tests)
 add_gsl_test(algorithm_tests)
+add_gsl_test(sloppy_notnull_tests)
+
+
+# No exception tests
+
+foreach(flag_var
+        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    STRING (REGEX REPLACE "/EHsc" "" ${flag_var} "${${flag_var}}")
+endforeach(flag_var)
+
+# this interface adds compile options to how the tests are run
+# please try to keep entries ordered =)
+add_library(gsl_tests_config_noexcept INTERFACE)
+target_compile_options(gsl_tests_config_noexcept INTERFACE
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /D_HAS_EXCEPTIONS=0
+        /wd4702
+        /wd4577
+        /W4
+        /WX
+    >
+    ${GSL_CPLUSPLUS_OPT}
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+        -fno-strict-aliasing
+        -fno-exceptions
+        -Wall
+        -Wcast-align
+        -Wconversion
+        -Wctor-dtor-privacy
+        -Werror
+        -Wextra
+        -Wno-missing-braces
+        -Wno-unknown-attributes
+        -Wnon-virtual-dtor
+        -Wold-style-cast
+        -Woverloaded-virtual
+        -Wpedantic
+        -Wshadow
+        -Wsign-conversion
+    >
+)
+
+# set definitions for tests
+target_compile_definitions(gsl_tests_config_noexcept INTERFACE
+    GSL_TERMINATE_ON_CONTRACT_VIOLATION
+)
+
+function(add_gsl_test_noexcept name)
+    add_executable(${name} ${name}.cpp)
+    target_link_libraries(${name}
+        GSL
+        gsl_tests_config_noexcept
+    )
+    add_test(
+      ${name}
+      ${name}
+    )
+    # group all tests under GSL_tests_noexcept
+    set_property(TARGET ${name} PROPERTY FOLDER "GSL_tests_noexcept")
+endfunction()
+
+add_gsl_test_noexcept(no_exception_throw_tests)
+add_gsl_test_noexcept(no_exception_ensure_tests)
