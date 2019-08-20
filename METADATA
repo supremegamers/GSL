@@ -5,10 +5,10 @@ third_party {
     type: GIT
     value: "https://github.com/Microsoft/GSL"
   }
-  version: "b74b286d5e333561b0f1ef1abd18de2606624455"
+  version: "b576cc6ce375cf42f6537d65a9ef29d67aa6b78e"
   last_upgrade_date {
     year: 2019
-    month: 5
-    day: 2
+    month: 8
+    day: 19
   }
 }
