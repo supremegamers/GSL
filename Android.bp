@@ -14,9 +14,8 @@
 // limitations under the License.
 //
 
-// Header only.
 cc_library_headers {
-    name: "libgsl",
+    name: "microsoft-gsl",
     host_supported: true,
     export_include_dirs: ["include"],
     cflags: ["-Wall", "-Werror"],
