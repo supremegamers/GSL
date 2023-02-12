@@ -27,7 +27,7 @@ Feature                            | Supported? | Description
 [**1. Views**][cg-views]           |            |
 owner                              | &#x2611;   | an alias for a raw pointer
 not_null                           | &#x2611;   | restricts a pointer / smart pointer to hold non-null values
-span                               | &#x2611;   | a view over a contiguous sequence of memory. Based on the standardized verison of `std::span`, however `gsl::span` enforces bounds checking. See the [wiki](https://github.com/microsoft/GSL/wiki/gsl::span-and-std::span) for additional information.
+span                               | &#x2611;   | a view over a contiguous sequence of memory. Based on the standardized version of `std::span`, however `gsl::span` enforces bounds checking. See the [wiki](https://github.com/microsoft/GSL/wiki/gsl::span-and-std::span) for additional information.
 span_p                             | &#x2610;   | spans a range starting from a pointer to the first place for which the predicate is true
 basic_zstring                      | &#x2611;   | A pointer to a C-string (zero-terminated array) with a templated char type
 zstring                            | &#x2611;   | An alias to `basic_zstring` with dynamic extent and a char type of char
@@ -48,15 +48,15 @@ Expects                            | &#x2611;   | a precondition assertion; on f
 Ensures                            | &#x2611;   | a postcondition assertion; on failure it terminates
 [**4. Utilities**][cg-utilities]   |            |
 move_owner                         | &#x2610;   | a helper function that moves one `owner` to the other
-byte                               | &#x2611;   | either an alias to std::byte or a byte type
+byte                               | &#x2611;   | either an alias to `std::byte` or a byte type
 final_action                       | &#x2611;   | a RAII style class that invokes a functor on its destruction
 finally                            | &#x2611;   | a helper function instantiating `final_action`
 GSL_SUPPRESS                       | &#x2611;   | a macro that takes an argument and turns it into `[[gsl::suppress(x)]]` or `[[gsl::suppress("x")]]`
 [[implicit]]                       | &#x2610;   | a "marker" to put on single-argument constructors to explicitly make them non-explicit
-index                              | &#x2611;   | a type to use for all container and array indexing (currently an alias for std::ptrdiff_t)
+index                              | &#x2611;   | a type to use for all container and array indexing (currently an alias for `std::ptrdiff_t`)
 joining_thread                     | &#x2610;   | a RAII style version of `std::thread` that joins
-narrow                             | &#x2611;   | a checked version of narrow_cast; it can throw `narrowing_error`
-narrow_cast                        | &#x2611;   | a narrowing cast for values and a synonym for static_cast
+narrow                             | &#x2611;   | a checked version of `narrow_cast`; it can throw `narrowing_error`
+narrow_cast                        | &#x2611;   | a narrowing cast for values and a synonym for `static_cast`
 narrowing_error                    | &#x2611;   | a custom exception type thrown by `narrow()`
 [**5. Concepts**][cg-concepts]     | &#x2610;   |
 
@@ -121,7 +121,7 @@ Note: These CI/CD steps are run with each pull request, however failures in them
 ## Building the tests
 To build the tests, you will require the following:
 
-* [CMake](http://cmake.org), version 3.1.3 (3.2.3 for AppleClang) or later to be installed and in your PATH.
+* [CMake](http://cmake.org), version 3.8 or later to be installed and in your PATH.
 
 These steps assume the source code of this repository has been cloned into a directory named `c:\GSL`.
 
@@ -179,43 +179,42 @@ Include the library using:
 
 ## Usage in CMake
 
-The library provides a Config file for CMake, once installed it can be found via
-
-    find_package(Microsoft.GSL CONFIG)
+The library provides a Config file for CMake, once installed it can be found via `find_package`.
 
 Which, when successful, will add library target called `Microsoft.GSL::GSL` which you can use via the usual
 `target_link_libraries` mechanism.
 
+```cmake
+find_package(Microsoft.GSL CONFIG REQUIRED)
+
+target_link_libraries(foobar PRIVATE Microsoft.GSL::GSL)
+```
+
 ### FetchContent
 
-If you are using cmake version 3.11+ you can use the offical FetchContent module.
+If you are using CMake version 3.11+ you can use the offical [FetchContent module](https://cmake.org/cmake/help/latest/module/FetchContent.html).
 This allows you to easily incorporate GSL into your project.
 
 ```cmake
-# NOTE: This example uses cmake version 3.14 (FetchContent_MakeAvailable).
+# NOTE: This example uses CMake version 3.14 (FetchContent_MakeAvailable).
 # Since it streamlines the FetchContent process
 cmake_minimum_required(VERSION 3.14)
 
 include(FetchContent)
 
-# In this example we are picking a specific tag.
-# You can also pick a specific commit, if you need to.
 FetchContent_Declare(GSL
     GIT_REPOSITORY "https://github.com/microsoft/GSL"
-    GIT_TAG "v3.1.0"
+    GIT_TAG "v4.0.0"
+    GIT_SHALLOW ON
 )
 
 FetchContent_MakeAvailable(GSL)
 
-# Now you can link against the GSL interface library
-add_executable(foobar)
-
-# Link against the interface library (IE header only library)
-target_link_libraries(foobar PRIVATE GSL)
+target_link_libraries(foobar PRIVATE Microsoft.GSL::GSL)
 ```
 
 ## Debugging visualization support
 For Visual Studio users, the file [GSL.natvis](./GSL.natvis) in the root directory of the repository can be added to your project if you would like more helpful visualization of GSL types in the Visual Studio debugger than would be offered by default.
 
-If you are using cmake this will be done automatically for you.
+If you are using CMake this will be done automatically for you.
 See 'GSL_VS_ADD_NATIVE_VISUALIZERS'

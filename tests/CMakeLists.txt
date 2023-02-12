@@ -1,7 +1,12 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.14...3.16)
 
-project(GSLTests CXX)
-enable_testing()  # again, for support standalone testing
+project(GSLTests LANGUAGES CXX)
+
+set(GSL_CXX_STANDARD "14" CACHE STRING "Use c++ standard")
+
+set(CMAKE_CXX_STANDARD ${GSL_CXX_STANDARD})
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FindPkgConfig)
 include(ExternalProject)
@@ -52,10 +57,14 @@ if (NOT GTestMain_FOUND)
 endif()
 
 if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    # CMake has been started independently in this directory with tests. Do
-    # import the globally installed Guidelines Support Library and test it
-    # instead of the current version from the include/ folder.
-    find_package(Microsoft.GSL REQUIRED)
+    find_package(Microsoft.GSL CONFIG REQUIRED)
+    enable_testing()
+
+    if (NOT DEFINED Microsoft.GSL_VERSION)
+        message(FATAL_ERROR "Microsoft.GSL_VERSION not defined!")
+    endif()
+
+    message(STATUS "Microsoft.GSL_VERSION = ${Microsoft.GSL_VERSION}")
 endif()
 
 if (MSVC AND (GSL_CXX_STANDARD GREATER_EQUAL 17))
@@ -104,6 +113,9 @@ if(MSVC) # MSVC or simulating MSVC
           $<$<EQUAL:${GSL_CXX_STANDARD},14>: # no support for [[maybe_unused]]
             -Wno-unused-member-function
             -Wno-unused-variable
+            $<$<VERSION_EQUAL:$<CXX_COMPILER_VERSION>,15.0.1>:
+              -Wno-deprecated # False positive in MSVC Clang 15.0.1 raises a C++17 warning
+            >
           >
         >
     )
@@ -191,7 +203,7 @@ add_executable(gsl_tests
     span_ext_tests.cpp
     span_tests.cpp
     strict_notnull_tests.cpp
-    string_span_tests.cpp
+    
     utils_tests.cpp
 )
 
@@ -234,6 +246,11 @@ if(MSVC) # MSVC or simulating MSVC
           -Wno-c++98-compat-pedantic
           -Wno-missing-prototypes
           -Wno-unknown-attributes
+          $<$<EQUAL:${GSL_CXX_STANDARD},14>:
+            $<$<VERSION_EQUAL:$<CXX_COMPILER_VERSION>,15.0.1>: 
+              -Wno-deprecated # False positive in MSVC Clang 15.0.1 raises a C++17 warning
+            >
+          >
         >
     )
     check_cxx_compiler_flag("-Wno-reserved-identifier" WARN_RESERVED_ID)

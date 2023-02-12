@@ -19,9 +19,9 @@
 #include <gsl/pointers> // for not_null, operator<, operator<=, operator>
 
 #include <algorithm> // for addressof
+#include <cstdint>   // for uint16_t
 #include <memory>    // for shared_ptr, make_shared, operator<, opera...
 #include <sstream>   // for operator<<, ostringstream, basic_ostream:...
-#include <stdint.h>  // for uint16_t
 #include <string>    // for basic_string, operator==, string, operator<<
 #include <typeinfo>  // for type_info
 
@@ -52,7 +52,7 @@ template <typename T>
 struct CustomPtr
 {
     CustomPtr(T* p) : p_(p) {}
-    operator T*() { return p_; }
+    operator T*() const { return p_; }
     bool operator!=(std::nullptr_t) const { return p_ != nullptr; }
     T* p_ = nullptr;
 };
@@ -442,11 +442,36 @@ TEST(notnull_tests, TestNotNullConstructorTypeDeduction)
     }
 
     {
+        const int i = 42;
+
+        not_null x{&i};
+#ifdef CONFIRM_COMPILATION_ERRORS
+        helper(not_null{&i});
+#endif
+        helper_const(not_null{&i});
+
+        EXPECT_TRUE(*x == 42);
+    }
+
+    {
         int i = 42;
         int* p = &i;
 
         not_null x{p};
         helper(not_null{p});
+        helper_const(not_null{p});
+
+        EXPECT_TRUE(*x == 42);
+    }
+
+    {
+        const int i = 42;
+        const int* p = &i;
+
+        not_null x{p};
+#ifdef CONFIRM_COMPILATION_ERRORS
+        helper(not_null{p});
+#endif
         helper_const(not_null{p});
 
         EXPECT_TRUE(*x == 42);
@@ -504,11 +529,36 @@ TEST(notnull_tests, TestMakeNotNull)
     }
 
     {
+        const int i = 42;
+
+        const auto x = make_not_null(&i);
+#ifdef CONFIRM_COMPILATION_ERRORS
+        helper(make_not_null(&i));
+#endif
+        helper_const(make_not_null(&i));
+
+        EXPECT_TRUE(*x == 42);
+    }
+
+    {
         int i = 42;
         int* p = &i;
 
         const auto x = make_not_null(p);
         helper(make_not_null(p));
+        helper_const(make_not_null(p));
+
+        EXPECT_TRUE(*x == 42);
+    }
+
+    {
+        const int i = 42;
+        const int* p = &i;
+
+        const auto x = make_not_null(p);
+#ifdef CONFIRM_COMPILATION_ERRORS
+        helper(make_not_null(p));
+#endif
         helper_const(make_not_null(p));
 
         EXPECT_TRUE(*x == 42);
@@ -556,15 +606,31 @@ TEST(notnull_tests, TestMakeNotNull)
 
 TEST(notnull_tests, TestStdHash)
 {
-    int x = 42;
-    int y = 99;
-    not_null<int*> nn{&x};
-    const not_null<int*> cnn{&x};
+    {
+        int x = 42;
+        int y = 99;
+        not_null<int*> nn{&x};
+        const not_null<int*> cnn{&x};
 
-    std::hash<not_null<int*>> hash_nn;
-    std::hash<int*> hash_intptr;
+        std::hash<not_null<int*>> hash_nn;
+        std::hash<int*> hash_intptr;
 
-    EXPECT_TRUE(hash_nn(nn) == hash_intptr(&x));
-    EXPECT_FALSE(hash_nn(nn) == hash_intptr(&y));
-    EXPECT_FALSE(hash_nn(nn) == hash_intptr(nullptr));
+        EXPECT_TRUE(hash_nn(nn) == hash_intptr(&x));
+        EXPECT_FALSE(hash_nn(nn) == hash_intptr(&y));
+        EXPECT_FALSE(hash_nn(nn) == hash_intptr(nullptr));
+    }
+
+    {
+        const int x = 42;
+        const int y = 99;
+        not_null<const int*> nn{&x};
+        const not_null<const int*> cnn{&x};
+
+        std::hash<not_null<const int*>> hash_nn;
+        std::hash<const int*> hash_intptr;
+
+        EXPECT_TRUE(hash_nn(nn) == hash_intptr(&x));
+        EXPECT_FALSE(hash_nn(nn) == hash_intptr(&y));
+        EXPECT_FALSE(hash_nn(nn) == hash_intptr(nullptr));
+    }
 }
