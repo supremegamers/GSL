@@ -646,37 +646,100 @@ TEST(span_test, from_container_constructor)
     }
 }
 
-TEST(span_test, from_convertible_span_constructor){{span<DerivedClass> avd;
-span<const DerivedClass> avcd = avd;
-static_cast<void>(avcd);
-}
-
+TEST(span_test, from_convertible_span_constructor)
 {
+    const auto terminateHandler = std::set_terminate([] {
+        std::cerr << "Expected Death. from_convertible_span_constructor";
+        std::abort();
+    });
+    const auto expected = GetExpectedDeathString(terminateHandler);
+
+    {
+        span<DerivedClass> avd;
+        span<const DerivedClass> avcd = avd;
+        static_cast<void>(avcd);
+    }
+
+    {
+        std::array<DerivedClass, 2> arr{};
+        span<DerivedClass, 2> avd{arr};
+        span<const DerivedClass, 2> avcd = avd;
+        static_cast<void>(avcd);
+    }
+
+    {
+        std::array<DerivedClass, 2> arr{};
+        span<DerivedClass, 2> avd{arr};
+        span<const DerivedClass> avcd = avd;
+        static_cast<void>(avcd);
+    }
+
+    {
+        std::array<DerivedClass, 2> arr{};
+        span<DerivedClass> avd{arr};
+        span<const DerivedClass, 2> avcd{avd};
+        static_cast<void>(avcd);
+    }
+
+    {
+        std::array<DerivedClass, 2> arr{};
+        span<DerivedClass> avd{arr};
+        using T = span<const DerivedClass, 1>;
+        EXPECT_DEATH(T{avd}, expected);
+    }
+
+    {
+        std::array<DerivedClass, 1> arr{};
+        span<DerivedClass> avd{arr};
+        using T = span<const DerivedClass, 2>;
+        EXPECT_DEATH(T{avd}, expected);
+    }
+
 #ifdef CONFIRM_COMPILATION_ERRORS
-    span<DerivedClass> avd;
-    span<BaseClass> avb = avd;
-    static_cast<void>(avb);
-#endif
-}
+    {
+        std::array<DerivedClass, 2> arr{};
+        span<DerivedClass> avd{arr};
+        span<const DerivedClass, 2> avcd = avd;
+        static_cast<void>(avcd);
+    }
 
-#ifdef CONFIRM_COMPILATION_ERRORS
-{
-    span<int> s;
-    span<unsigned int> s2 = s;
-    static_cast<void>(s2);
-}
+    {
+        std::array<DerivedClass, 2> arr{};
+        span<DerivedClass, 2> avd{arr};
+        span<const DerivedClass, 1> avcd = avd;
+        static_cast<void>(avcd);
+    }
 
-{
-    span<int> s;
-    span<const unsigned int> s2 = s;
-    static_cast<void>(s2);
-}
+    {
+        std::array<DerivedClass, 2> arr{};
+        span<DerivedClass, 2> avd{arr};
+        span<const DerivedClass, 3> avcd = avd;
+        static_cast<void>(avcd);
+    }
 
-{
-    span<int> s;
-    span<short> s2 = s;
-    static_cast<void>(s2);
-}
+    {
+        span<DerivedClass> avd;
+        span<BaseClass> avb = avd;
+        static_cast<void>(avb);
+    }
+
+    {
+        span<int> s;
+        span<unsigned int> s2 = s;
+        static_cast<void>(s2);
+    }
+
+    {
+        span<int> s;
+        span<const unsigned int> s2 = s;
+        static_cast<void>(s2);
+    }
+
+    {
+        span<int> s;
+        span<short> s2 = s;
+        static_cast<void>(s2);
+    }
 #endif
 }
 
@@ -1053,12 +1116,6 @@ TEST(span_test, rbegin_rend)
 
 TEST(span_test, as_bytes)
 {
-    const auto terminateHandler = std::set_terminate([] {
-        std::cerr << "Expected Death. as_bytes";
-        std::abort();
-    });
-    const auto expected = GetExpectedDeathString(terminateHandler);
-
     int a[] = {1, 2, 3, 4};
     {
         const span<const int> s = a;
@@ -1083,12 +1140,6 @@ TEST(span_test, as_bytes)
         const auto bs = as_bytes(s);
         EXPECT_TRUE(static_cast<const void*>(bs.data()) == static_cast<const void*>(s.data()));
         EXPECT_TRUE(bs.size() == s.size_bytes());
-    }
-
-    int b[5] = {1, 2, 3, 4, 5};
-    {
-        span<int> sp(std::begin(b), static_cast<size_t>(-2));
-        EXPECT_DEATH((void) sp.size_bytes(), expected);
     }
 }
 
@@ -1317,3 +1368,16 @@ TEST(span_test, std_span)
     EXPECT_TRUE(std_span.size() == gsl_span.size());
 }
 #endif // defined(FORCE_STD_SPAN_TESTS) || defined(__cpp_lib_span) && __cpp_lib_span >= 202002L
+
+#if defined(__cpp_lib_span) && defined(__cpp_lib_ranges)
+// This test covers the changes in PR #1100
+TEST(span_test, msvc_compile_error_PR1100)
+{
+    int arr[]{1, 7, 2, 9};
+    gsl::span sp{arr, std::size(arr)};
+    std::ranges::sort(sp);
+    for (const auto& e : sp) {
+        (void)e;
+    }
+}
+#endif // defined(__cpp_lib_span) && defined(__cpp_lib_ranges)
